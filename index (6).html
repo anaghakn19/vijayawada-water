@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seasonal Surface Water in Vijayawada, 2001–2021</title>
+<style>
+  :root{
+    --bg:#f6f9fb; --card:#ffffff; --ink:#14232e; --muted:#5a6b78;
+    --accent:#0b6fa4; --accent2:#00a3d9; --line:#dbe5ec;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.65}
+  header{background:linear-gradient(135deg,#08306b,#0b6fa4 60%,#00a3d9);color:#fff;padding:56px 20px 44px}
+  .wrap{max-width:1000px;margin:0 auto}
+  header h1{margin:0 0 8px;font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.2}
+  header p{margin:4px 0;opacity:.92}
+  header .meta{margin-top:16px;font-size:.92rem;opacity:.85}
+  nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);z-index:10}
+  nav .wrap{display:flex;gap:4px;flex-wrap:wrap;padding:8px 20px}
+  nav a{color:var(--accent);text-decoration:none;font-size:.9rem;padding:6px 10px;border-radius:6px}
+  nav a:hover{background:#eaf4fa}
+  main{padding:10px 20px 60px}
+  section{margin-top:40px}
+  h2{font-size:1.5rem;margin:0 0 6px;color:#08306b}
+  h3{font-size:1.1rem;margin:26px 0 6px;color:#0b4f7a}
+  p{margin:8px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0}
+  figure{margin:0}
+  figure img{width:100%;height:auto;display:block;border-radius:8px;border:1px solid var(--line);background:#fff}
+  figcaption{font-size:.88rem;color:var(--muted);margin-top:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:16px 0}
+  .stat{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent2);border-radius:10px;padding:14px}
+  .stat .v{font-size:1.5rem;font-weight:700;color:#08306b}
+  .stat .l{font-size:.82rem;color:var(--muted)}
+  table{border-collapse:collapse;width:100%;font-size:.92rem}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#eaf4fa;position:sticky;top:0}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.88rem;margin-top:10px}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:-2px;border:1px solid #9aa}
+  ul{padding-left:22px}
+  li{margin:6px 0}
+  .note{background:#fff8e1;border:1px solid #f1dca0;border-radius:8px;padding:10px 14px;font-size:.9rem}
+  a{color:var(--accent)}
+  code{background:#eef3f6;padding:1px 5px;border-radius:4px;font-size:.9em}
+  pre.code{background:#0f1c26;color:#e6eef4;padding:14px;border-radius:8px;overflow:auto;font-size:.82rem;line-height:1.5;margin:10px 0}
+  pre.code code{background:none;padding:0;color:inherit}
+  summary{cursor:pointer;margin-bottom:8px}
+  footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);font-size:.88rem;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Seasonal Surface Water in Vijayawada</h1>
+    <p>Annual mapping and long-term variability of seasonal surface-water area, 2001–2021</p>
+    <p>Google Earth Engine (Python/geemap) · JRC Global Surface Water v1.4</p>
+    <p class="meta">Course: HS524M · Test 2, Question 2 (Individual Google Earth Engine Urban Analysis) · Submitted by: <strong>Anagha K N</strong> · Roll No.: <strong>CE25M402</strong></p>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <a href="#overview">Overview</a>
+    <a href="#method">Method</a>
+    <a href="#dynamic">Dynamic output</a>
+    <a href="#maps">Maps</a>
+    <a href="#graphs">Graphs</a>
+    <a href="#numbers">Numerical results</a>
+    <a href="#discussion">Discussion</a>
+    <a href="#limits">Limitations</a>
+    <a href="#code">Code</a>
+    <a href="#sources">Sources</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="overview">
+  <h2>1. Overview</h2>
+  <p><strong>Question.</strong> How much of Vijayawada is covered by <em>seasonal</em> surface water each year, and how variable is this area over 2001–2021?</p>
+  <p><strong>Boundary.</strong> Vijayawada municipal boundary from DataMeet Municipal Spatial Data (<a href="https://github.com/datameet/Municipal_Spatial_Data" target="_blank" rel="noopener">github.com/datameet/Municipal_Spatial_Data</a>).</p>
+</section>
+
+<section id="method">
+  <h2>2. Method</h2>
+  <ol>
+    <li>The boundary was read with GeoPandas, converted to WGS84, stripped of z-coordinates, dissolved to one polygon and converted to an Earth Engine <code>FeatureCollection</code>.</li>
+    <li>The 21 annual <code>waterClass</code> images (2001–2021) were loaded and clipped to the boundary, using the same 30 m scale for every year.</li>
+    <li>Seasonal water was extracted as <code>waterClass == 2</code>. Annual area (km²) was obtained by summing <code>ee.Image.pixelArea()</code> over the seasonal pixels inside the boundary; permanent, not-water and no-data areas were computed the same way.</li>
+    <li>Variability and trend were summarised with mean, standard deviation, coefficient of variation, Theil–Sen slope and the Mann–Kendall (Kendall&nbsp;τ) test; the first five years (2001–2005) were compared with the last five (2017–2021).</li>
+    <li>Two thematic maps were made: the number of years each pixel was seasonal water, and the change in that frequency between 2001–2005 and 2017–2021.</li>
+    <li>An animated GIF of the annual water class was produced from the 2001–2021 image collection.</li>
+  </ol>
+</section>
+
+<section id="dynamic">
+  <h2>3. Dynamic output: annual water class, 2001–2021</h2>
+  <div class="card">
+    <figure>
+      <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/Vijayawada_water_class_2001_2021_labelled.gif"
+           alt="Animated GIF of annual JRC water class in Vijayawada from 2001 to 2021">
+      <figcaption>Animation of the JRC annual water class within Vijayawada (one frame per year, year and progress bar shown on the frame).</figcaption>
+    </figure>
+    <div class="legend">
+      <span><i class="sw" style="background:#00c2ff"></i>Seasonal water</span>
+      <span><i class="sw" style="background:#08306b"></i>Permanent water</span>
+      <span><i class="sw" style="background:#f5efd9"></i>Not water</span>
+      <span><i class="sw" style="background:#9e9e9e"></i>No data</span>
+      <span><i class="sw" style="background:#fff;border:2px solid #000"></i>Vijayawada boundary</span>
+    </div>
+  </div>
+</section>
+
+<section id="maps">
+  <h2>4. Thematic maps</h2>
+
+  <h3>4.1 Water class in selected years</h3>
+  <div class="card">
+    <figure>
+      <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/map_selected_years.png" alt="Water class maps for 2001, 2006, 2011, 2016 and 2021">
+      <figcaption>JRC water class within the city boundary for 2001, 2006, 2011, 2016 and 2021, all drawn at the same scale and with the same colours.</figcaption>
+    </figure>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">4.2 Seasonal-water frequency</h3>
+      <figure>
+        <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/map_seasonal_frequency.png" alt="Number of years each pixel was seasonal water, 2001 to 2021">
+        <figcaption>Number of years (out of 21) in which each pixel was classified as seasonal water. High values mean persistent seasonal water; low values mean occasional.</figcaption>
+      </figure>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">4.3 Change in frequency</h3>
+      <figure>
+        <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/map_seasonal_change.png" alt="Change in seasonal-water frequency between 2001-2005 and 2017-2021">
+        <figcaption>Change in the number of seasonal-water years, (2017–2021) minus (2001–2005). Blue = more frequent recently; red = less frequent.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section id="graphs">
+  <h2>5. Graphs</h2>
+  <div class="card">
+    <figure>
+      <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/graph_seasonal_water_area.png" alt="Annual seasonal surface-water area in Vijayawada with mean, SD band and Theil-Sen trend">
+      <figcaption>Annual seasonal surface-water area (km²) with the mean, ±1 SD band and Theil–Sen trend. Red circles mark years with more than 10% of the city unobserved.</figcaption>
+    </figure>
+  </div>
+  <div class="card">
+    <figure>
+      <img onerror="imgFallback(this)" src="vijayawada_gsw_outputs/graph_permanent_and_nodata.png" alt="Seasonal versus permanent water area and no-data share by year">
+      <figcaption>Left: seasonal versus permanent water area. Right: share of the city with no valid observation in each year (data-quality check).</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="numbers">
+  <h2>6. Numerical results</h2>
+  <p>All values below are calculated directly from the exported table
+     <a href="vijayawada_gsw_outputs/vijayawada_seasonal_water_area_2001_2021.csv" download>vijayawada_seasonal_water_area_2001_2021.csv</a>
+     (30 m pixels, areas in km²).</p>
+  <div id="load-error" class="note" style="display:none">
+    The data table could not be loaded. Open this page through a web server (for example your hosted site, or run
+    <code>python -m http.server</code> in this folder), because browsers block reading local files directly.
+  </div>
+
+  <div class="stats" id="stat-cards"></div>
+
+</section>
+
+<section id="discussion">
+  <h2>7. Discussion</h2>
+
+  <h3>Temporal pattern and variability</h3>
+  <p id="disc-temporal">Loading…</p>
+
+  <h3>Seasonal versus permanent water</h3>
+  <p id="disc-perm">Loading…</p>
+
+  <h3>Main spatial pattern</h3>
+  <p>The frequency map (Section 4.2) shows where seasonal water is concentrated, and the selected-year maps (Section 4.1) show how its extent changes between years. Seasonal water is expected mainly along the Krishna river channel and its banks near the Prakasam Barrage and in low-lying areas, where flooding and seasonal inundation are most likely. Pixels with high frequency values are persistently seasonal, while pixels with values of 1–3 are occasional and mostly reflect individual wet years. The change map (Section 4.3) separates the parts of the city where seasonal water became more frequent from those where it became less frequent.</p>
+
+  <h3>Possible explanations</h3>
+  <p>Year-to-year changes in seasonal water in a river city are plausibly linked to monsoon rainfall, river discharge, releases from the barrage and upstream reservoirs, flood events, and land-use change near the river. These are hypotheses: the dataset records <em>where and for how long</em> water was present, not <em>why</em>, so no causal claim is made here without independent rainfall or flood records.</p>
+</section>
+
+<section id="limits">
+  <h2>8. Limitations</h2>
+  <ul>
+    <li><strong>Resolution.</strong> 30 m pixels miss small ponds and narrow channels, and each year gets only one class, so the months of water presence are unknown.</li>
+    <li><strong>Data availability.</strong> Cloud cover in the monsoon and Landsat sensor gaps reduce valid observations in some years.</li>
+    <li><strong>Period and boundary.</strong> The dataset ends in 2021, and results depend on the municipal boundary used.</li>
+  </ul>
+</section>
+
+<section id="code">
+  <h2>9. Code</h2>
+  <p>Complete Google Earth Engine (Python/geemap) code, in the order it was run. The notebook can also be downloaded in Section 10.</p>
+  <details class="card" open>
+    <summary><strong>Show / hide code</strong></summary>
+    <pre class="code"><code>import os
+import io
+import requests
+
+import ee
+import geemap
+import geemap.colormaps as cm
+import geopandas as gpd
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.cm import ScalarMappable
+from scipy import stats
+from PIL import Image</code></pre>
+    <pre class="code"><code>PROJECT_ID = &quot;deft-manifest-510708-q3&quot;
+
+try:
+    ee.Initialize(project=PROJECT_ID)
+except Exception:
+    ee.Authenticate()
+    ee.Initialize(project=PROJECT_ID)
+
+print(&quot;Google Earth Engine initialized successfully.&quot;)</code></pre>
+    <pre class="code"><code>START_YEAR = 2001
+END_YEAR = 2021                      # GSW v1.4 ends in 2021
+YEARS = list(range(START_YEAR, END_YEAR + 1))
+
+# Folder containing the boundary file
+data_path = r&quot;C:\Users\ANAGHA K N\Desktop\UISA_2026&quot;
+
+BOUNDARY_PATH = os.path.join(data_path, &quot;Vijayawada_Boundary.geojson&quot;)
+
+# All figures, the GIF and the CSV are saved here (inside your data folder)
+OUT_DIR = os.path.join(data_path, &quot;vijayawada_gsw_outputs&quot;)
+os.makedirs(OUT_DIR, exist_ok=True)
+
+print(&quot;Folder exists:&quot;, os.path.exists(data_path))
+print(&quot;Boundary file exists:&quot;, os.path.exists(BOUNDARY_PATH))
+
+# State this in your webpage (assignment requirement)
+BOUNDARY_SOURCE = (
+    &quot;Vijayawada municipal boundary, DataMeet Municipal Spatial Data &quot;
+    &quot;(github.com/datameet/Municipal_Spatial_Data), CC BY-SA 2.5 India&quot;
+)
+DATASET_SOURCE = (
+    &quot;Pekel et al. (2016); JRC Global Surface Water v1.4 &quot;
+    &quot;(JRC/GSW1_4/YearlyHistory), Google Earth Engine&quot;
+)
+
+print(&quot;Years:&quot;, YEARS[0], &quot;to&quot;, YEARS[-1], f&quot;({len(YEARS)} years)&quot;)
+print(&quot;Outputs will be saved in:&quot;, os.path.abspath(OUT_DIR))</code></pre>
+    <pre class="code"><code>vijayawada_gdf = gpd.read_file(BOUNDARY_PATH).to_crs(epsg=4326)
+
+# This boundary file stores 3-D coordinates (x, y, z). Earth Engine only accepts
+# 2-D geometries and raises &quot;Invalid GeoJSON geometry&quot; otherwise, so drop the z value.
+try:
+    from shapely import force_2d
+except ImportError:                                   # older shapely versions
+    from shapely.ops import transform
+    force_2d = lambda geom: transform(lambda x, y, z=None: (x, y), geom)
+
+vijayawada_gdf[&quot;geometry&quot;] = vijayawada_gdf.geometry.apply(force_2d)
+print(&quot;Geometry has z-values:&quot;, vijayawada_gdf.geometry.has_z.any())
+
+# Merge into a single geometry in case the file has more than one feature
+vijayawada_gdf = vijayawada_gdf.dissolve().reset_index(drop=True)[[&quot;geometry&quot;]]
+
+city_area_km2_local = vijayawada_gdf.to_crs(epsg=32644).geometry.area.iloc[0] / 1e6
+print(f&quot;City boundary area (GeoPandas, UTM 44N): {city_area_km2_local:.2f} km²&quot;)
+
+vijayawada = geemap.geopandas_to_ee(vijayawada_gdf)
+vijayawada_geom = vijayawada.geometry()
+region_bounds = vijayawada_geom.bounds()
+
+vijayawada_gdf</code></pre>
+    <pre class="code"><code>Map = geemap.Map()
+Map.centerObject(vijayawada, 11)
+Map.addLayer(vijayawada, {&quot;color&quot;: &quot;blue&quot;}, &quot;Vijayawada boundary&quot;)
+Map</code></pre>
+    <pre class="code"><code>gsw = ee.ImageCollection(&quot;JRC/GSW1_4/YearlyHistory&quot;)
+
+print(&quot;Total images in the collection:&quot;, gsw.size().getInfo())
+
+first = ee.Image(gsw.first())
+print(&quot;Bands:&quot;, first.bandNames().getInfo())
+print(&quot;Properties of the first image:&quot;, first.propertyNames().getInfo())</code></pre>
+    <pre class="code"><code>def get_year_image(year):
+    start = ee.Date.fromYMD(year, 1, 1)
+    end = start.advance(1, &quot;year&quot;)
+    img = ee.Image(
+        gsw.filterDate(start, end).first()
+    )
+    return (
+        img.select(&quot;waterClass&quot;)
+        .clipToCollection(vijayawada)
+        .set(&quot;year&quot;, year)
+        .set(&quot;system:time_start&quot;, start.millis())
+    )
+
+
+annual_images = [get_year_image(y) for y in YEARS]
+
+annual_water = (
+    ee.ImageCollection.fromImages(annual_images)
+    .sort(&quot;system:time_start&quot;)
+)
+
+print(&quot;Number of annual images:&quot;, annual_water.size().getInfo())   # expected: 21</code></pre>
+    <pre class="code"><code>SEASONAL_COLOR = &quot;#00c2ff&quot;
+PERMANENT_COLOR = &quot;#08306b&quot;
+NODATA_COLOR = &quot;#bdbdbd&quot;
+NOTWATER_COLOR = &quot;#f5f1e6&quot;
+
+# index 0..3 -&gt; no data, not water, seasonal, permanent
+CLASS_PALETTE = [NODATA_COLOR, NOTWATER_COLOR, SEASONAL_COLOR, PERMANENT_COLOR]
+class_vis = {&quot;min&quot;: 0, &quot;max&quot;: 3, &quot;palette&quot;: CLASS_PALETTE}
+
+# For the interactive slider we show only water (classes 2 and 3) on top of the basemap
+slider_vis = {&quot;min&quot;: 2, &quot;max&quot;: 3, &quot;palette&quot;: [SEASONAL_COLOR, PERMANENT_COLOR]}
+
+def water_only(img):
+    return (
+        img.updateMask(img.gte(2))
+        .copyProperties(img, [&quot;system:time_start&quot;, &quot;year&quot;])
+    )
+
+water_slider_collection = annual_water.map(water_only)</code></pre>
+    <pre class="code"><code>img_start = ee.Image(annual_water.filter(ee.Filter.eq(&quot;year&quot;, START_YEAR)).first())
+img_end = ee.Image(annual_water.filter(ee.Filter.eq(&quot;year&quot;, END_YEAR)).first())
+
+Map = geemap.Map()
+Map.centerObject(vijayawada, 11)
+Map.add_basemap(&quot;SATELLITE&quot;)
+Map.addLayer(img_start, class_vis, f&quot;Water class {START_YEAR}&quot;)
+Map.addLayer(img_end, class_vis, f&quot;Water class {END_YEAR}&quot;, shown=False)
+Map.addLayer(vijayawada, {&quot;color&quot;: &quot;white&quot;}, &quot;Vijayawada boundary&quot;)
+Map</code></pre>
+    <pre class="code"><code>def yearly_areas(img):
+    area_km2 = ee.Image.pixelArea().divide(1e6)
+
+    bands = ee.Image.cat([
+        area_km2.multiply(img.eq(2)).rename(&quot;seasonal_km2&quot;),
+        area_km2.multiply(img.eq(3)).rename(&quot;permanent_km2&quot;),
+        area_km2.multiply(img.eq(1)).rename(&quot;notwater_km2&quot;),
+        area_km2.multiply(img.eq(0)).rename(&quot;nodata_km2&quot;),
+        area_km2.rename(&quot;total_km2&quot;),
+    ])
+
+    sums = bands.reduceRegion(
+        reducer=ee.Reducer.sum(),
+        geometry=vijayawada_geom,
+        scale=30,
+        maxPixels=1e9,
+        tileScale=4
+    )
+
+    return ee.Feature(None, sums).set(&quot;year&quot;, img.get(&quot;year&quot;))
+
+
+area_fc = ee.FeatureCollection(annual_water.map(yearly_areas))
+
+rows = [f[&quot;properties&quot;] for f in area_fc.getInfo()[&quot;features&quot;]]
+df = pd.DataFrame(rows).sort_values(&quot;year&quot;).reset_index(drop=True)
+df[&quot;year&quot;] = df[&quot;year&quot;].astype(int)
+
+df.head()</code></pre>
+    <pre class="code"><code>df[&quot;water_total_km2&quot;] = df[&quot;seasonal_km2&quot;] + df[&quot;permanent_km2&quot;]
+df[&quot;seasonal_pct_city&quot;] = 100 * df[&quot;seasonal_km2&quot;] / df[&quot;total_km2&quot;]
+df[&quot;permanent_pct_city&quot;] = 100 * df[&quot;permanent_km2&quot;] / df[&quot;total_km2&quot;]
+df[&quot;pct_nodata&quot;] = 100 * df[&quot;nodata_km2&quot;] / df[&quot;total_km2&quot;]
+
+# Consistency check: classes should sum to the total area
+check = (
+    df[[&quot;seasonal_km2&quot;, &quot;permanent_km2&quot;, &quot;notwater_km2&quot;, &quot;nodata_km2&quot;]].sum(axis=1)
+    - df[&quot;total_km2&quot;]
+).abs().max()
+print(f&quot;Largest mismatch between class sum and total area: {check:.6f} km²&quot;)
+
+print(f&quot;City area from Earth Engine: {df[&#x27;total_km2&#x27;].iloc[0]:.2f} km²&quot;)
+print(f&quot;City area from GeoPandas   : {city_area_km2_local:.2f} km²&quot;)
+
+df.round(3)</code></pre>
+    <pre class="code"><code>csv_path = os.path.join(OUT_DIR, &quot;vijayawada_seasonal_water_area_2001_2021.csv&quot;)
+df.round(4).to_csv(csv_path, index=False)
+print(&quot;Saved:&quot;, csv_path)</code></pre>
+    <pre class="code"><code>s = df[&quot;seasonal_km2&quot;].to_numpy()
+yrs = df[&quot;year&quot;].to_numpy()
+
+mean_s = s.mean()
+sd_s = s.std(ddof=1)
+cv_s = 100 * sd_s / mean_s
+
+i_min, i_max = s.argmin(), s.argmax()
+
+yoy = np.diff(s)
+i_jump = np.abs(yoy).argmax()
+
+sen = stats.theilslopes(s, yrs)           # slope, intercept, low, high
+tau, p_tau = stats.kendalltau(yrs, s)
+ols = stats.linregress(yrs, s)
+
+early_mean = df[df[&quot;year&quot;] &lt;= START_YEAR + 4][&quot;seasonal_km2&quot;].mean()
+late_mean = df[df[&quot;year&quot;] &gt;= END_YEAR - 4][&quot;seasonal_km2&quot;].mean()
+
+print(&quot;SEASONAL SURFACE WATER, VIJAYAWADA&quot;)
+print(&quot;-&quot; * 55)
+print(f&quot;Mean annual area               : {mean_s:.2f} km² ({100*mean_s/df[&#x27;total_km2&#x27;].mean():.2f}% of city)&quot;)
+print(f&quot;Standard deviation             : {sd_s:.2f} km²&quot;)
+print(f&quot;Coefficient of variation       : {cv_s:.1f} %&quot;)
+print(f&quot;Minimum                        : {s[i_min]:.2f} km² in {yrs[i_min]}&quot;)
+print(f&quot;Maximum                        : {s[i_max]:.2f} km² in {yrs[i_max]}&quot;)
+print(f&quot;Largest year-to-year change    : {yoy[i_jump]:+.2f} km² ({yrs[i_jump]}→{yrs[i_jump+1]})&quot;)
+print(f&quot;Theil–Sen slope                : {sen[0]:+.3f} km²/yr (95% CI {sen[2]:+.3f} to {sen[3]:+.3f})&quot;)
+print(f&quot;OLS slope                      : {ols.slope:+.3f} km²/yr (p = {ols.pvalue:.3f})&quot;)
+print(f&quot;Kendall τ                      : {tau:+.3f} (p = {p_tau:.3f})&quot;)
+print(f&quot;Mean {START_YEAR}–{START_YEAR+4}               : {early_mean:.2f} km²&quot;)
+print(f&quot;Mean {END_YEAR-4}–{END_YEAR}               : {late_mean:.2f} km²&quot;)
+print(f&quot;Change (late − early)          : {late_mean-early_mean:+.2f} km² ({100*(late_mean-early_mean)/early_mean:+.1f}%)&quot;)
+print(f&quot;Years with &gt;10% of the city unobserved: {list(df.loc[df[&#x27;pct_nodata&#x27;]&gt;10,&#x27;year&#x27;])}&quot;)
+
+summary_stats = {
+    &quot;mean_km2&quot;: mean_s, &quot;sd_km2&quot;: sd_s, &quot;cv_pct&quot;: cv_s,
+    &quot;min_km2&quot;: s[i_min], &quot;min_year&quot;: int(yrs[i_min]),
+    &quot;max_km2&quot;: s[i_max], &quot;max_year&quot;: int(yrs[i_max]),
+    &quot;sen_slope_km2_per_yr&quot;: sen[0], &quot;kendall_tau&quot;: tau, &quot;kendall_p&quot;: p_tau,
+    &quot;early_mean_km2&quot;: early_mean, &quot;late_mean_km2&quot;: late_mean,
+}
+pd.Series(summary_stats).round(4).to_csv(os.path.join(OUT_DIR, &quot;summary_statistics.csv&quot;))</code></pre>
+    <pre class="code"><code>fig, ax = plt.subplots(figsize=(10, 5.2))
+
+ax.axhspan(mean_s - sd_s, mean_s + sd_s, color=&quot;#cfeefc&quot;, alpha=0.6,
+           label=&quot;Mean ± 1 SD&quot;)
+ax.axhline(mean_s, color=&quot;#0077aa&quot;, ls=&quot;--&quot;, lw=1.2, label=f&quot;Mean = {mean_s:.2f} km²&quot;)
+
+ax.plot(yrs, s, marker=&quot;o&quot;, color=SEASONAL_COLOR.replace(&quot;#00c2ff&quot;, &quot;#0099cc&quot;),
+        lw=2, label=&quot;Seasonal water area&quot;)
+
+trend_line = sen[1] + sen[0] * yrs
+ax.plot(yrs, trend_line, color=&quot;black&quot;, lw=1.5,
+        label=f&quot;Theil–Sen trend ({sen[0]:+.3f} km²/yr, p = {p_tau:.2f})&quot;)
+
+# flag years with a lot of missing data
+flag = df[&quot;pct_nodata&quot;] &gt; 10
+ax.scatter(yrs[flag], s[flag], s=140, facecolors=&quot;none&quot;, edgecolors=&quot;red&quot;,
+           lw=1.8, label=&quot;&gt;10% of city unobserved&quot;, zorder=5)
+
+ax.set_title(&quot;Annual area of seasonal surface water — Vijayawada, 2001–2021&quot;,
+             fontsize=13, fontweight=&quot;bold&quot;)
+ax.set_xlabel(&quot;Year&quot;)
+ax.set_ylabel(&quot;Seasonal surface-water area (km²)&quot;)
+ax.set_xticks(yrs)
+ax.set_xticklabels(yrs, rotation=60)
+ax.grid(alpha=0.3)
+ax.legend(frameon=True, fontsize=9, loc=&quot;best&quot;)
+
+fig.text(0.01, 0.005, f&quot;Data: {DATASET_SOURCE}. Boundary: DataMeet.&quot;,
+         fontsize=7, color=&quot;gray&quot;)
+plt.tight_layout(rect=(0, 0.02, 1, 1))
+fig.savefig(os.path.join(OUT_DIR, &quot;graph_seasonal_water_area.png&quot;), dpi=200)
+plt.show()</code></pre>
+    <pre class="code"><code>fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
+
+ax = axes[0]
+ax.plot(yrs, df[&quot;seasonal_km2&quot;], marker=&quot;o&quot;, color=&quot;#0099cc&quot;, label=&quot;Seasonal water&quot;)
+ax.plot(yrs, df[&quot;permanent_km2&quot;], marker=&quot;s&quot;, color=PERMANENT_COLOR, label=&quot;Permanent water&quot;)
+ax.set_title(&quot;Seasonal vs permanent water area&quot;, fontweight=&quot;bold&quot;)
+ax.set_xlabel(&quot;Year&quot;)
+ax.set_ylabel(&quot;Area (km²)&quot;)
+ax.set_xticks(yrs[::2])
+ax.grid(alpha=0.3)
+ax.legend()
+
+ax = axes[1]
+ax.bar(yrs, df[&quot;pct_nodata&quot;], color=&quot;#9e9e9e&quot;)
+ax.set_title(&quot;Share of city with no valid observation&quot;, fontweight=&quot;bold&quot;)
+ax.set_xlabel(&quot;Year&quot;)
+ax.set_ylabel(&quot;No-data area (% of city)&quot;)
+ax.set_xticks(yrs[::2])
+ax.grid(alpha=0.3, axis=&quot;y&quot;)
+
+plt.tight_layout()
+fig.savefig(os.path.join(OUT_DIR, &quot;graph_permanent_and_nodata.png&quot;), dpi=200)
+plt.show()
+
+print(&quot;Correlation between seasonal-water area and no-data share: &quot;
+      f&quot;{np.corrcoef(df[&#x27;seasonal_km2&#x27;], df[&#x27;pct_nodata&#x27;])[0,1]:+.2f}&quot;)
+print(&quot;Correlation between seasonal and permanent water area: &quot;
+      f&quot;{np.corrcoef(df[&#x27;seasonal_km2&#x27;], df[&#x27;permanent_km2&#x27;])[0,1]:+.2f}&quot;)</code></pre>
+    <pre class="code"><code># White background everywhere, light fill inside the city, black boundary line
+white_bg = ee.Image.constant(1).visualize(palette=[&quot;#ffffff&quot;], min=0, max=1)
+city_fill = (
+    ee.Image.constant(1).clipToCollection(vijayawada)
+    .visualize(palette=[&quot;#f5f1e6&quot;], min=0, max=1)
+)
+outline = (
+    ee.Image().byte()
+    .paint(featureCollection=vijayawada, color=1, width=2)
+    .visualize(palette=[&quot;#000000&quot;], min=0, max=1)
+)
+
+def compose(layer_vis):
+    &quot;&quot;&quot;white background + city fill + data layer + boundary line&quot;&quot;&quot;
+    return white_bg.blend(city_fill).blend(layer_vis).blend(outline)
+
+
+def ee_to_pil(rgb_image, dimensions=900):
+    url = rgb_image.getThumbURL({
+        &quot;region&quot;: region_bounds,
+        &quot;dimensions&quot;: dimensions,
+        &quot;format&quot;: &quot;png&quot;,
+    })
+    resp = requests.get(url, timeout=180)
+    resp.raise_for_status()
+    return Image.open(io.BytesIO(resp.content))</code></pre>
+    <pre class="code"><code>SELECTED_YEARS = [2001, 2006, 2011, 2016, 2021]
+
+fig, axes = plt.subplots(1, len(SELECTED_YEARS), figsize=(18, 4.8))
+
+for ax, yr in zip(axes, SELECTED_YEARS):
+    img = ee.Image(annual_water.filter(ee.Filter.eq(&quot;year&quot;, yr)).first())
+    layer = img.visualize(**class_vis)
+    ax.imshow(ee_to_pil(compose(layer), 600))
+    ax.set_title(str(yr), fontsize=14, fontweight=&quot;bold&quot;)
+    ax.axis(&quot;off&quot;)
+
+handles = [
+    mpatches.Patch(color=SEASONAL_COLOR, label=&quot;Seasonal water&quot;),
+    mpatches.Patch(color=PERMANENT_COLOR, label=&quot;Permanent water&quot;),
+    mpatches.Patch(color=NOTWATER_COLOR, ec=&quot;gray&quot;, label=&quot;Not water&quot;),
+    mpatches.Patch(color=NODATA_COLOR, label=&quot;No data&quot;),
+    mpatches.Patch(fc=&quot;none&quot;, ec=&quot;black&quot;, label=&quot;Vijayawada boundary&quot;),
+]
+fig.legend(handles=handles, loc=&quot;lower center&quot;, ncol=5, fontsize=11, frameon=False)
+fig.suptitle(&quot;JRC water class within Vijayawada (annual)&quot;, fontsize=15, fontweight=&quot;bold&quot;)
+fig.text(0.01, 0.01, f&quot;Data: {DATASET_SOURCE}. Boundary: {BOUNDARY_SOURCE}.&quot;,
+         fontsize=7, color=&quot;gray&quot;)
+plt.tight_layout(rect=(0, 0.08, 1, 0.95))
+fig.savefig(os.path.join(OUT_DIR, &quot;map_selected_years.png&quot;), dpi=200)
+plt.show()</code></pre>
+    <pre class="code"><code>seasonal_flag = annual_water.map(
+    lambda img: img.eq(2).copyProperties(img, [&quot;system:time_start&quot;, &quot;year&quot;])
+)
+
+seasonal_freq = (
+    seasonal_flag.sum()
+    .rename(&quot;years_seasonal&quot;)
+    .clipToCollection(vijayawada)
+)
+
+FREQ_PALETTE = [&quot;#e0f7ff&quot;, &quot;#7fd8f5&quot;, &quot;#2aa4d9&quot;, &quot;#0b5ea8&quot;, &quot;#08306b&quot;]
+freq_vis = {&quot;min&quot;: 1, &quot;max&quot;: len(YEARS), &quot;palette&quot;: FREQ_PALETTE}
+
+freq_layer = seasonal_freq.updateMask(seasonal_freq.gt(0)).visualize(**freq_vis)
+freq_img = ee_to_pil(compose(freq_layer), 1000)
+
+fig, ax = plt.subplots(figsize=(8, 7.5))
+ax.imshow(freq_img)
+ax.axis(&quot;off&quot;)
+ax.set_title(&quot;Number of years classified as seasonal water, 2001–2021\nVijayawada&quot;,
+             fontsize=13, fontweight=&quot;bold&quot;)
+
+cmap = LinearSegmentedColormap.from_list(&quot;freq&quot;, FREQ_PALETTE)
+sm = ScalarMappable(norm=Normalize(1, len(YEARS)), cmap=cmap)
+cbar = fig.colorbar(sm, ax=ax, fraction=0.04, pad=0.02)
+cbar.set_label(&quot;Years as seasonal water (out of 21)&quot;)
+
+fig.text(0.01, 0.01, f&quot;Data: {DATASET_SOURCE}. Boundary: DataMeet.&quot;, fontsize=7, color=&quot;gray&quot;)
+plt.tight_layout()
+fig.savefig(os.path.join(OUT_DIR, &quot;map_seasonal_frequency.png&quot;), dpi=200)
+plt.show()</code></pre>
+    <pre class="code"><code># Numerical summary of the frequency map
+area_km2 = ee.Image.pixelArea().divide(1e6)
+
+def area_where(mask_img):
+    d = area_km2.multiply(mask_img).reduceRegion(
+        reducer=ee.Reducer.sum(), geometry=vijayawada_geom,
+        scale=30, maxPixels=1e9, tileScale=4
+    )
+    return list(d.getInfo().values())[0]
+
+ever = area_where(seasonal_freq.gte(1))
+often = area_where(seasonal_freq.gte(11))     # seasonal in more than half the years
+always = area_where(seasonal_freq.gte(len(YEARS)))
+
+print(f&quot;Area that was seasonal water in at least 1 year      : {ever:.2f} km²&quot;)
+print(f&quot;Area that was seasonal water in at least 11 of 21 yrs: {often:.2f} km²&quot;)
+print(f&quot;Area that was seasonal water in all 21 years         : {always:.2f} km²&quot;)
+print(f&quot;Mean annual seasonal area / area ever seasonal       : {mean_s/ever:.2f}&quot;)</code></pre>
+    <pre class="code"><code>early_img = seasonal_flag.filter(ee.Filter.lte(&quot;year&quot;, START_YEAR + 4)).sum()
+late_img = seasonal_flag.filter(ee.Filter.gte(&quot;year&quot;, END_YEAR - 4)).sum()
+
+change = late_img.subtract(early_img).rename(&quot;change&quot;).clipToCollection(vijayawada)
+has_signal = early_img.add(late_img).gt(0)
+
+CHANGE_PALETTE = [&quot;#b2182b&quot;, &quot;#ef8a62&quot;, &quot;#f7f7f7&quot;, &quot;#67a9cf&quot;, &quot;#2166ac&quot;]
+change_vis = {&quot;min&quot;: -5, &quot;max&quot;: 5, &quot;palette&quot;: CHANGE_PALETTE}
+
+change_layer = change.updateMask(has_signal).visualize(**change_vis)
+change_pil = ee_to_pil(compose(change_layer), 1000)
+
+fig, ax = plt.subplots(figsize=(8, 7.5))
+ax.imshow(change_pil)
+ax.axis(&quot;off&quot;)
+ax.set_title(&quot;Change in seasonal-water frequency\n(2017–2021) minus (2001–2005), Vijayawada&quot;,
+             fontsize=13, fontweight=&quot;bold&quot;)
+
+cmap = LinearSegmentedColormap.from_list(&quot;chg&quot;, CHANGE_PALETTE)
+sm = ScalarMappable(norm=Normalize(-5, 5), cmap=cmap)
+cbar = fig.colorbar(sm, ax=ax, fraction=0.04, pad=0.02)
+cbar.set_label(&quot;Change in number of seasonal-water years (out of 5)&quot;)
+
+fig.text(0.01, 0.01, f&quot;Data: {DATASET_SOURCE}. Boundary: DataMeet.&quot;, fontsize=7, color=&quot;gray&quot;)
+plt.tight_layout()
+fig.savefig(os.path.join(OUT_DIR, &quot;map_seasonal_change.png&quot;), dpi=200)
+plt.show()
+
+gain = area_where(change.gt(0))
+loss = area_where(change.lt(0))
+print(f&quot;Area where seasonal-water frequency increased: {gain:.2f} km²&quot;)
+print(f&quot;Area where seasonal-water frequency decreased: {loss:.2f} km²&quot;)</code></pre>
+    <pre class="code"><code>year_labels = [str(y) for y in YEARS]
+
+Map = geemap.Map()
+Map.centerObject(vijayawada, 11)
+Map.add_basemap(&quot;SATELLITE&quot;)
+
+Map.add_time_slider(
+    water_slider_collection,
+    slider_vis,
+    region=vijayawada_geom,
+    layer_name=&quot;Annual surface water&quot;,
+    labels=year_labels,
+    time_interval=1,
+    position=&quot;bottomright&quot;
+)
+
+Map.addLayer(vijayawada, {&quot;color&quot;: &quot;white&quot;}, &quot;Vijayawada boundary&quot;)
+
+# Legend for the slider layer
+Map.add_legend(
+    title=&quot;Surface water&quot;,
+    legend_dict={
+        &quot;Seasonal water&quot;: SEASONAL_COLOR,
+        &quot;Permanent water&quot;: PERMANENT_COLOR,
+    },
+    position=&quot;bottomleft&quot;
+)
+Map</code></pre>
+    <pre class="code"><code>def make_frame(img):
+    layer = img.visualize(**class_vis)
+    return (
+        compose(layer)
+        .copyProperties(img, [&quot;system:time_start&quot;, &quot;year&quot;])
+    )
+
+gif_collection = annual_water.map(make_frame)
+
+gif_file = os.path.join(OUT_DIR, &quot;Vijayawada_water_class_2001_2021.gif&quot;)
+
+video_args = {
+    &quot;dimensions&quot;: 700,
+    &quot;region&quot;: region_bounds,
+    &quot;framesPerSecond&quot;: 2,
+    &quot;crs&quot;: &quot;EPSG:3857&quot;,
+    &quot;bands&quot;: [&quot;vis-red&quot;, &quot;vis-green&quot;, &quot;vis-blue&quot;],
+    &quot;min&quot;: 0,
+    &quot;max&quot;: 255,
+}
+
+geemap.download_ee_video(gif_collection, video_args, gif_file)
+print(&quot;Saved:&quot;, gif_file)</code></pre>
+    <pre class="code"><code>labelled_gif = os.path.join(OUT_DIR, &quot;Vijayawada_water_class_2001_2021_labelled.gif&quot;)
+
+geemap.add_text_to_gif(
+    gif_file,
+    labelled_gif,
+    xy=(&quot;5%&quot;, &quot;5%&quot;),
+    text_sequence=year_labels,
+    font_size=30,
+    font_color=&quot;black&quot;,
+    add_progress_bar=True,
+    progress_bar_color=&quot;#0099cc&quot;
+)
+
+geemap.show_image(labelled_gif)</code></pre>
+    <pre class="code"><code>print(&quot;KEY NUMBERS FOR THE WRITE-UP&quot;)
+print(&quot;=&quot; * 60)
+print(f&quot;1. City area analysed: {df[&#x27;total_km2&#x27;].iloc[0]:.1f} km² &quot;
+      f&quot;(boundary: {BOUNDARY_SOURCE})&quot;)
+print(f&quot;2. Mean seasonal water: {mean_s:.2f} km² &quot;
+      f&quot;({100*mean_s/df[&#x27;total_km2&#x27;].iloc[0]:.1f}% of city area), &quot;
+      f&quot;SD {sd_s:.2f} km², CV {cv_s:.0f}%&quot;)
+print(f&quot;3. Lowest year: {yrs[i_min]} ({s[i_min]:.2f} km²); &quot;
+      f&quot;highest year: {yrs[i_max]} ({s[i_max]:.2f} km²); &quot;
+      f&quot;ratio max/min = {s[i_max]/max(s[i_min],1e-9):.1f}&quot;)
+print(f&quot;4. Trend: Theil–Sen {sen[0]:+.3f} km²/yr, Kendall τ = {tau:+.2f}, p = {p_tau:.3f} &quot;
+      f&quot;→ {&#x27;statistically significant&#x27; if p_tau &lt; 0.05 else &#x27;not statistically significant&#x27;} at 5%&quot;)
+print(f&quot;5. First 5 yrs vs last 5 yrs: {early_mean:.2f} → {late_mean:.2f} km² &quot;
+      f&quot;({100*(late_mean-early_mean)/early_mean:+.1f}%)&quot;)
+print(f&quot;6. Persistence: {ever:.2f} km² seasonal in ≥1 year; &quot;
+      f&quot;{often:.2f} km² in ≥11 years; {always:.2f} km² in all 21 years&quot;)
+print(f&quot;7. Data quality: maximum no-data share = {df[&#x27;pct_nodata&#x27;].max():.1f}% &quot;
+      f&quot;(year {int(df.loc[df[&#x27;pct_nodata&#x27;].idxmax(), &#x27;year&#x27;])})&quot;)</code></pre>
+  </details>
+</section>
+
+<section id="sources">
+  <h2>10. Data sources and downloads</h2>
+  <ul>
+    <li><strong>Water data:</strong> JRC Global Surface Water, Yearly History, accessed through Google Earth Engine.</li>
+    <li><strong>Boundary:</strong> DataMeet Municipal Spatial Data, Vijayawada boundary.</li>
+    <li><strong>Tools:</strong> Google Earth Engine and geemap (Python).</li>
+    <li><strong>Complete code / notebook:</strong>
+      <a id="code-link" href="Vijayawada_GSW_seasonal_water_code_only.ipynb" target="_blank" rel="noopener">View the code on GitHub</a>
+      &nbsp;·&nbsp; <a id="colab-link" href="https://colab.research.google.com/" target="_blank" rel="noopener">Open in Google Colab</a></li>
+    <li><strong>Table of annual areas:</strong> <a href="vijayawada_gsw_outputs/vijayawada_seasonal_water_area_2001_2021.csv" download>CSV</a></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  Seasonal Surface Water in Vijayawada, 2001–2021 · HS524M Test 2 · Anagha K N
+</footer>
+
+<script>
+function imgFallback(img){
+  if(!img.dataset.tried){
+    img.dataset.tried="1";
+    img.src=img.getAttribute("src").split("/").pop();
+    return;
+  }
+  var d=document.createElement("div");
+  d.className="note";
+  d.textContent="Image not found: "+img.getAttribute("src").split("/").pop()+
+    ". Upload it to the vijayawada_gsw_outputs folder next to index.html.";
+  img.replaceWith(d);
+}
+(function(){
+  var host=location.hostname, file="Vijayawada_GSW_seasonal_water_code_only.ipynb";
+  if(host.indexOf(".github.io")>0){
+    var user=host.split(".")[0];
+    var parts=location.pathname.split("/").filter(Boolean);
+    var repo=parts.length&&parts[0].indexOf(".")<0&&parts[0]!=="index.html"?parts[0]:user+".github.io";
+    var path=user+"/"+repo+"/blob/main/"+file;
+    document.getElementById("code-link").href="https://github.com/"+path;
+    document.getElementById("colab-link").href="https://colab.research.google.com/github/"+path;
+  }
+})();
+</script>
+<script>
+(function () {
+  var CSV = "vijayawada_gsw_outputs/vijayawada_seasonal_water_area_2001_2021.csv";
+
+  function median(a) {
+    var b = a.slice().sort(function (x, y) { return x - y; }), n = b.length;
+    return n % 2 ? b[(n - 1) / 2] : (b[n / 2 - 1] + b[n / 2]) / 2;
+  }
+  function mean(a) { return a.reduce(function (s, v) { return s + v; }, 0) / a.length; }
+  function sd(a) { var m = mean(a); return Math.sqrt(a.reduce(function (s, v) { return s + (v - m) * (v - m); }, 0) / (a.length - 1)); }
+  function corr(a, b) {
+    var ma = mean(a), mb = mean(b), sab = 0, saa = 0, sbb = 0;
+    for (var i = 0; i < a.length; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) * (a[i] - ma); sbb += (b[i] - mb) * (b[i] - mb); }
+    return sab / Math.sqrt(saa * sbb);
+  }
+  function normCdf(z) {
+    var t = 1 / (1 + 0.2316419 * Math.abs(z));
+    var d = 0.3989423 * Math.exp(-z * z / 2);
+    var p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return z > 0 ? 1 - p : p;
+  }
+  function f(x, d) { return Number(x).toFixed(d); }
+  function sgn(x, d) { return (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(d); }
+
+  function parse(text) {
+    var lines = text.trim().split(/\r?\n/), head = lines[0].split(",");
+    return lines.slice(1).map(function (ln) {
+      var c = ln.split(","), o = {};
+      head.forEach(function (h, i) { o[h.trim()] = parseFloat(c[i]); });
+      return o;
+    });
+  }
+
+  function run(rows) {
+    rows.sort(function (a, b) { return a.year - b.year; });
+    rows.forEach(function (r) {
+      if (isNaN(r.pct_nodata)) r.pct_nodata = 100 * r.nodata_km2 / r.total_km2;
+    });
+
+    var yrs = rows.map(function (r) { return r.year; });
+    var s = rows.map(function (r) { return r.seasonal_km2; });
+    var p = rows.map(function (r) { return r.permanent_km2; });
+    var nd = rows.map(function (r) { return r.pct_nodata; });
+    var total = mean(rows.map(function (r) { return r.total_km2; }));
+    var n = s.length;
+
+    var m = mean(s), sdv = sd(s), cv = 100 * sdv / m;
+    var iMin = s.indexOf(Math.min.apply(null, s)), iMax = s.indexOf(Math.max.apply(null, s));
+
+    // Theil–Sen
+    var slopes = [];
+    for (var i = 0; i < n; i++) for (var j = i + 1; j < n; j++) slopes.push((s[j] - s[i]) / (yrs[j] - yrs[i]));
+    var sen = median(slopes);
+
+    // Mann–Kendall (Kendall tau, normal approximation, no ties assumed)
+    var S = 0;
+    for (i = 0; i < n; i++) for (j = i + 1; j < n; j++) S += Math.sign(s[j] - s[i]);
+    var tau = S / (n * (n - 1) / 2);
+    var varS = n * (n - 1) * (2 * n + 5) / 18;
+    var z = S === 0 ? 0 : (S - Math.sign(S)) / Math.sqrt(varS);
+    var pTau = 2 * (1 - normCdf(Math.abs(z)));
+
+    var early = mean(s.slice(0, 5)), late = mean(s.slice(-5));
+    var chg = 100 * (late - early) / early;
+    var flagged = rows.filter(function (r) { return r.pct_nodata > 10; }).map(function (r) { return r.year; });
+    var rPerm = corr(s, p), rND = corr(s, nd);
+
+    // y-o-y jump
+    var jump = 0, jumpI = 0;
+    for (i = 1; i < n; i++) if (Math.abs(s[i] - s[i - 1]) > Math.abs(jump)) { jump = s[i] - s[i - 1]; jumpI = i; }
+
+    var cards = [
+      [f(m, 2) + " km²", "Mean annual seasonal water (" + f(100 * m / total, 1) + "% of city)"],
+      [f(sdv, 2) + " km²", "Standard deviation"],
+      [f(cv, 0) + "%", "Coefficient of variation"],
+      [f(s[iMin], 2) + " km²", "Lowest year: " + yrs[iMin]],
+      [f(s[iMax], 2) + " km²", "Highest year: " + yrs[iMax]],
+      [sgn(sen, 3) + " km²/yr", "Theil–Sen trend"],
+      ["τ = " + sgn(tau, 2), "Kendall τ, p ≈ " + f(pTau, 3)],
+      [f(early, 2) + " → " + f(late, 2), "Mean 2001–05 → 2017–21 (km²), " + sgn(chg, 1) + "%"]
+    ];
+    document.getElementById("stat-cards").innerHTML = cards.map(function (c) {
+      return '<div class="stat"><div class="v">' + c[0] + '</div><div class="l">' + c[1] + '</div></div>';
+    }).join("");
+
+    var sig = pTau < 0.05;
+    var dir = sen > 0 ? "an increase" : (sen < 0 ? "a decrease" : "no change");
+    document.getElementById("disc-temporal").innerHTML =
+      "Seasonal surface water covered on average <strong>" + f(m, 2) + " km²</strong> (" + f(100 * m / total, 1) +
+      "% of the " + f(total, 1) + " km² city) with a standard deviation of " + f(sdv, 2) + " km², a coefficient of variation of <strong>" +
+      f(cv, 0) + "%</strong>. The smallest area was <strong>" + f(s[iMin], 2) + " km² in " + yrs[iMin] +
+      "</strong> and the largest <strong>" + f(s[iMax], 2) + " km² in " + yrs[iMax] + "</strong>" +
+      (s[iMin] > 0 ? " (a ratio of about " + f(s[iMax] / s[iMin], 1) + " between the two)" : "") +
+      ". The largest year-to-year change was " + sgn(jump, 2) + " km² between " + yrs[jumpI - 1] + " and " + yrs[jumpI] + ". " +
+      "The Theil–Sen slope of " + sgn(sen, 3) + " km² per year indicates " + dir + " over the period, but the Kendall τ of " + sgn(tau, 2) +
+      " (p ≈ " + f(pTau, 3) + ") is <strong>" + (sig ? "statistically significant" : "not statistically significant") + "</strong> at the 5% level. " +
+      "Comparing the first five years (" + f(early, 2) + " km²) with the last five (" + f(late, 2) + " km²) gives a change of " + sgn(chg, 1) + "%. " +
+      (sig
+        ? "The long-term trend is therefore distinguishable from the year-to-year noise, although the annual variability remains large."
+        : "The year-to-year variability is therefore large compared with any long-term trend, so the series is better described as strongly variable than as steadily rising or falling.");
+
+    document.getElementById("disc-perm").innerHTML =
+      "Seasonal and permanent water are only weakly or moderately related in time (correlation " + sgn(rPerm, 2) +
+      "). Where seasonal area rises while permanent area falls, part of the change may be reclassification between the two classes rather than a real change in total water. " +
+      "Data quality matters too: the correlation between seasonal area and the no-data share is " + sgn(rND, 2) + ", and the maximum no-data share is " +
+      f(Math.max.apply(null, nd), 1) + "% (" + yrs[nd.indexOf(Math.max.apply(null, nd))] + "). " +
+      (flagged.length
+        ? "Years with more than 10% of the city unobserved (" + flagged.join(", ") + ") are marked in red on the main graph and should be read with caution."
+        : "No year has more than 10% of the city unobserved, so missing data is unlikely to drive the main result.");
+  }
+
+  fetch(CSV).then(function (r) {
+    if (!r.ok) throw new Error(r.status);
+    return r.text();
+  }).then(function (t) { run(parse(t)); })
+    .catch(function () {
+      document.getElementById("load-error").style.display = "block";
+      document.getElementById("disc-temporal").textContent = "Numerical discussion appears once the data table loads.";
+      document.getElementById("disc-perm").textContent = "";
+    });
+})();
+</script>
+</body>
+</html>

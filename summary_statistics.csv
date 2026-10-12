@@ -1,0 +1,13 @@
+,0
+mean_km2,1.6208
+sd_km2,1.1473
+cv_pct,70.7875
+min_km2,0.3722
+min_year,2003.0
+max_km2,3.6099
+max_year,2020.0
+sen_slope_km2_per_yr,0.0432
+kendall_tau,0.2
+kendall_p,0.2186
+early_mean_km2,0.8085
+late_mean_km2,2.388
